@@ -1,10 +1,9 @@
 require('dotenv').config();
 const express = require('express');
-const bodyParser = require('body-parser');
 const initDB = require('./db');
 
 const app = express();
-app.use(bodyParser.json());
+app.use(express.json());
 
 initDB().then(connection => {
     console.log('Connexion à la base de données établie');
