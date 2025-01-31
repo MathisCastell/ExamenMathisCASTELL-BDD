@@ -1,14 +1,27 @@
 # Installation projet
+Avoir mysql workbench version 8-0-41 d'installé et node v22.11.0 :
 
-- npm init -y
-- npm install express
-- npm install dotenv
-- npm install body-parser
-- npm install mysql2
+Executer ce script dans mysqlworbench :
+```SQL
+DROP USER IF EXISTS 'admin_user'@'localhost';
+CREATE USER 'admin_user'@'localhost' IDENTIFIED BY 'admin_user';
+GRANT ALL PRIVILEGES ON *.* TO 'admin_user'@'localhost' WITH GRANT OPTION;
+```
 
-- Décommenter la ligne 28 la première fois qu'on lance le serveur pour avoir des données dans la BDD si nécessaire.
+faire ces commandes dans le terminal 
+
+- **npm i**
+- **node initDB.js** pour créer la base de données 
+- **node server** pour lancer le serveur
+
+- Modifier les informations de connexion à la base de données dans le fichier db.js et initDB.js
 
 lancement projet : - node server.js
+
+
+
+
+
 
 # BDD 
 
@@ -287,3 +300,97 @@ Pour protéger au mieux notre code, l'appel de Procédure et la création d'util
 - ❌ **Absence de validation des données** (ex. : prix négatif possible).
 - ❌ **Aucune vérification du stock** lors de l'ajout d'une commande.
 - ❌ **Manque de gestion des erreurs** (ex. : suppression d'un produit lié à une commande).
+
+
+
+---
+
+## 🚀 **Solutions adoptées en V2**  
+
+La **Version 2 (V2)** de l'API de gestion de stock a été développée pour **corriger les failles identifiées en V1** et améliorer la **sécurité, la performance et la robustesse** du système.  
+
+### 🔹 **1️⃣ Sécurité renforcée**  
+
+- **Utilisation exclusive de procédures stockées (`CALL procedure()`)** pour toutes les interactions avec la base de données.  
+- **Élimination des injections SQL** en empêchant toute requête dynamique manipulant directement les entrées utilisateur.  
+- **Validation des données** avant leur enregistrement (ex. : impossibilité d'enregistrer un prix négatif ou un stock insuffisant).  
+- **Blocage de la suppression des produits en commande** pour éviter les incohérences dans la base de données.  
+
+### 🔹 **2️⃣ Séparation des rôles MySQL**  
+
+Deux utilisateurs distincts ont été mis en place :  
+- **`admin_user`** : A tous les droits pour créer et gérer la base de données (uniquement utilisé lors de l'initialisation).  
+- **`app_user`** : Utilisé par l'API, il ne peut **que lire, insérer, modifier et supprimer des données**, sans modifier la structure de la base.  
+
+📌 **Objectif :** Minimiser l'impact d'une faille potentielle en restreignant les accès à la base de données.  
+
+### 🔹 **3️⃣ Gestion des erreurs et validation des entrées**  
+
+- **Retour d'erreurs explicites** lorsque des valeurs invalides sont soumises.  
+- **Mécanisme `SIGNAL SQLSTATE` en SQL** pour empêcher les actions illogiques (ex. : commande d'un produit hors stock).  
+- **Erreurs renvoyées en JSON** dans l'API pour un meilleur traitement côté client.  
+
+### 🔹 **4️⃣ Optimisation des performances**  
+
+- **Connexion MySQL ouverte et fermée à chaque requête** pour éviter toute fuite de connexion.  
+- **Utilisation de `GRANT EXECUTE` pour `app_user`**, garantissant un accès limité uniquement aux **procédures stockées**.  
+- **Meilleure gestion des transactions SQL** pour assurer la cohérence des données.  
+
+### 🔹 **5️⃣ Documentation et structuration améliorées**  
+
+- **Séparation du code en plusieurs fichiers (`routes/`, `initDB.js`, `db.js`)** pour une maintenance plus facile.  
+- **Documentation détaillée des routes de l'API** dans le README pour faciliter l'intégration avec d'autres systèmes.  
+
+---
+
+## 📌 **Documentation de l'API**  
+
+L'API REST permet d'interagir avec la base de données via plusieurs **endpoints** organisés par entité.  
+
+### **🔹 Endpoints disponibles**  
+
+#### **Catégories**  
+- `GET /categories` → Liste toutes les catégories.  
+- `GET /categories/:id` → Récupère une catégorie par ID.  
+- `POST /categories` → Ajoute une nouvelle catégorie.  
+- `PUT /categories/:id` → Met à jour une catégorie existante.  
+- `DELETE /categories/:id` → Supprime une catégorie.  
+
+#### **Produits**  
+- `GET /produits` → Liste tous les produits.  
+- `GET /produits/:id` → Récupère un produit par ID.  
+- `POST /produits` → Ajoute un nouveau produit (avec vérification du stock et des prix).  
+- `PUT /produits/:id` → Met à jour un produit.  
+- `DELETE /produits/:id` → Supprime un produit (impossible s'il est référencé dans une commande).  
+
+#### **Clients**  
+- `GET /clients` → Liste tous les clients.  
+- `GET /clients/:id` → Récupère un client par ID.  
+- `POST /clients` → Ajoute un nouveau client (email unique obligatoire).  
+- `PUT /clients/:id` → Met à jour un client.  
+- `DELETE /clients/:id` → Supprime un client.  
+
+#### **Commandes**  
+- `GET /commandes` → Liste toutes les commandes.  
+- `GET /commandes/:id` → Récupère une commande par ID.  
+- `POST /commandes` → Ajoute une commande pour un client.  
+- `PUT /commandes/:id` → Met à jour une commande (changer le client lié).  
+- `DELETE /commandes/:id` → Supprime une commande.  
+
+#### **Lignes de commande**  
+- `GET /lignes-commande` → Liste toutes les lignes de commande.  
+- `GET /lignes-commande/:id` → Récupère une ligne de commande spécifique.  
+- `POST /lignes-commande` → Ajoute une ligne de commande (vérifie le stock disponible).  
+- `PUT /lignes-commande/:id` → Met à jour une ligne de commande.  
+- `DELETE /lignes-commande/:id` → Supprime une ligne de commande.  
+
+---
+
+## **Pourquoi cette V2 est meilleure que la V1 ?**
+✔ **Protection contre les injections SQL** (procédures stockées uniquement).  
+✔ **Séparation des rôles MySQL (`admin_user`, `app_user`)** pour sécuriser l'accès aux données.  
+✔ **Gestion stricte des erreurs et validation des entrées** (impossible d'entrer des valeurs incohérentes).  
+✔ **Optimisation des performances** avec des transactions bien gérées.  
+✔ **API bien documentée et structurée** pour une intégration fluide avec d'autres systèmes.  
+
+📌 **Cette V2 répond aux problèmes de sécurité et de cohérence de la V1, tout en garantissant une API robuste et maintenable.** 
